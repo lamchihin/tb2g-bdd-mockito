@@ -2,6 +2,7 @@ package guru.springframework.sfgpetclinic.services.springdatajpa;
 
 import guru.springframework.sfgpetclinic.model.Speciality;
 import guru.springframework.sfgpetclinic.repositories.SpecialtyRepository;
+import jdk.jshell.spi.ExecutionControl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -11,8 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -109,5 +112,48 @@ class SpecialitySDJpaServiceTest {
 
         // then
         then(specialtyRepository).should().delete(any(Speciality.class));
+    }
+
+    @Test
+    void testDoThrow() {
+        // given - throw exception whenever delete is called
+        doThrow(new RuntimeException("boom")).when(specialtyRepository).delete(any());
+
+        // when & assertThrows
+        assertThrows(RuntimeException.class, () -> specialtyRepository.delete(new Speciality()));
+
+        // then
+        verify(specialtyRepository).delete(any());
+    }
+
+    /*
+        findById() returns something, so we can have given(...).findById(...).willThrow(...)
+     */
+    @Test
+    void testFindByIDThrows() {
+        // given
+        given(specialtyRepository.findById(1L)).willThrow(new RuntimeException("boom"));
+
+        // when
+        assertThrows(RuntimeException.class, () -> service.findById(1L));
+
+        // then
+        then(specialtyRepository).should().findById(1L);
+    }
+
+    /*
+        delete() returns void, so can't have given(...).delete(any()).willThrow(...)
+        Trick here is willThrow(...).given(...).delete(any())
+     */
+    @Test
+    void testDeleteBDD() {
+        // given
+        willThrow(new RuntimeException("boom")).given(specialtyRepository).delete(any());
+
+        // when
+        assertThrows(RuntimeException.class, () -> specialtyRepository.delete(new Speciality()));
+
+        // then
+        then(specialtyRepository).should().delete(any());
     }
 }
